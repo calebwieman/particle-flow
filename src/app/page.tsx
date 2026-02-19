@@ -128,9 +128,9 @@ export default function ParticleCanvas() {
   }), []);
 
   const createSmoke = useCallback((width: number, height: number): SmokeCloud => ({
-    x: -200, // Start from LEFT side
+    x: width + 200, // Start from RIGHT side
     y: Math.random() * height,
-    vx: Math.random() * 0.8 + 0.4, // Move RIGHT toward center
+    vx: -Math.random() * 0.8 - 0.4, // Move LEFT toward center
     vy: (Math.random() - 0.5) * 0.2,
     size: Math.random() * 220 + 100, // Larger clouds
     alpha: 0,
@@ -180,26 +180,26 @@ export default function ParticleCanvas() {
         smoke.rotation += smoke.rotationSpeed;
         
         // Fade in then fade out - more visible
-        if (smoke.alpha < 0.08) smoke.alpha += 0.001;
+        if (smoke.alpha < 0.12) smoke.alpha += 0.0015;
         
-        // Reset when off screen (right side)
-        if (smoke.x > width + smoke.size * 2 || smoke.y < -smoke.size || smoke.y > height + smoke.size) {
+        // Reset when off screen (left side)
+        if (smoke.x < -smoke.size * 2 || smoke.y < -smoke.size || smoke.y > height + smoke.size) {
           Object.assign(smoke, createSmoke(width, height));
         }
         
-        // Mouse interaction with smoke - push away from cursor
+        // Mouse interaction with smoke - push away with sharper response
         const smokeDx = smoke.x - mouseRef.current.x;
         const smokeDy = smoke.y - mouseRef.current.y;
         const smokeDist = Math.sqrt(smokeDx * smokeDx + smokeDy * smokeDy);
-        const smokeMouseRadius = 150;
+        const smokeMouseRadius = 120;
         
         if (smokeDist < smokeMouseRadius) {
-          const smokeForce = (smokeMouseRadius - smokeDist) / smokeMouseRadius;
+          const smokeForce = Math.pow((smokeMouseRadius - smokeDist) / smokeMouseRadius, 1.5);
           const smokeAngle = Math.atan2(smokeDy, smokeDx);
-          smoke.x += Math.cos(smokeAngle) * smokeForce * 2;
-          smoke.y += Math.sin(smokeAngle) * smokeForce * 2;
-          smoke.vx += Math.cos(smokeAngle) * smokeForce * 0.02;
-          smoke.vy += Math.sin(smokeAngle) * smokeForce * 0.02;
+          smoke.x += Math.cos(smokeAngle) * smokeForce * 4;
+          smoke.y += Math.sin(smokeAngle) * smokeForce * 4;
+          smoke.vx += Math.cos(smokeAngle) * smokeForce * 0.08;
+          smoke.vy += Math.sin(smokeAngle) * smokeForce * 0.08;
         }
         
         // Draw smoke cloud - ethereal wispy look
@@ -226,10 +226,10 @@ export default function ParticleCanvas() {
 
       // Draw stars with occasional trails/shooting stars
       starsRef.current.forEach((star) => {
-        // Random trail spawning
-        if (!star.trail && Math.random() < 0.002) {
+        // Random trail spawning - more frequent
+        if (!star.trail && Math.random() < 0.008) {
           star.trail = [];
-          star.trailTimer = 30;
+          star.trailTimer = 40;
         }
         
         // Update trail
