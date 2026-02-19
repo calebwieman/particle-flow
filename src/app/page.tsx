@@ -15,10 +15,21 @@ interface Particle {
 interface Star {
   x: number;
   y: number;
+  baseX: number;
+  baseY: number;
   size: number;
   alpha: number;
   twinkleSpeed: number;
   twinklePhase: number;
+}
+
+interface SmokeParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
 }
 
 interface Settings {
@@ -30,30 +41,28 @@ interface Settings {
 }
 
 const COLOR_PRESETS = {
-  ocean: { name: 'Ocean', colors: ['#00d9ff', '#0099cc', '#00ffcc', '#66ffff'], bg: 'rgba(0, 20, 40, 0.3)' },
-  sunset: { name: 'Sunset', colors: ['#ff6b35', '#f7c59f', '#efa00b', '#d62246'], bg: 'rgba(40, 20, 10, 0.3)' },
-  neon: { name: 'Neon', colors: ['#ff00ff', '#00ffff', '#ff00ff', '#ffff00'], bg: 'rgba(20, 0, 30, 0.3)' },
-  aurora: { name: 'Aurora', colors: ['#00ff87', '#60efff', '#ff00ff', '#7b2dff'], bg: 'rgba(10, 20, 30, 0.3)' },
-  fire: { name: 'Fire', colors: ['#ff4500', '#ff8c00', '#ffd700', '#ff6347'], bg: 'rgba(30, 10, 0, 0.3)' },
-  forest: { name: 'Forest', colors: ['#228b22', '#32cd32', '#90ee90', '#006400'], bg: 'rgba(0, 20, 10, 0.3)' },
-  cosmic: { name: 'Cosmic', colors: ['#ffffff', '#e0e0ff', '#a0a0ff', '#ff80c0'], bg: 'rgba(5, 5, 20, 0.3)' },
+  cosmic: { name: 'Cosmic', colors: ['#ffffff', '#e0e0ff', '#a0a0ff', '#ff80c0', '#00ffff'] },
+  ocean: { name: 'Ocean', colors: ['#00d9ff', '#0099cc', '#00ffcc', '#66ffff'] },
+  sunset: { name: 'Sunset', colors: ['#ff6b35', '#f7c59f', '#efa00b', '#d62246'] },
+  neon: { name: 'Neon', colors: ['#ff00ff', '#00ffff', '#ff00ff', '#ffff00'] },
+  aurora: { name: 'Aurora', colors: ['#00ff87', '#60efff', '#ff00ff', '#7b2dff'] },
+  fire: { name: 'Fire', colors: ['#ff4500', '#ff8c00', '#ffd700', '#ff6347'] },
 };
 
 export default function ParticleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const bgCanvasRef = useRef<HTMLCanvasElement>(null);
-  const smokeCanvasRef = useRef<HTMLCanvasElement>(null);
-  const particlesRef = useRef<Particle[]>([]);
   const starsRef = useRef<Star[]>([]);
-  const smokeParticlesRef = useRef<Particle[]>([]);
-  const mouseRef = useRef({ x: -1000, y: -1000, pressed: false, prevX: 0, prevY: 0 });
+  const smokeRef = useRef<SmokeParticle[]>([]);
+  const particlesRef = useRef<Particle[]>([]);
+  const mouseRef = useRef({ x: 0, y: 0, pressed: false, prevX: 0, prevY: 0 });
   const animationRef = useRef<number>();
+  const frameRef = useRef<number>(0);
   
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [settings, setSettings] = useState<Settings>({
-    particleCount: 200,
-    mouseRadius: 200,
-    mouseForce: 3,
+    particleCount: 150,
+    mouseRadius: 150,
+    mouseForce: 2,
     friction: 0.97,
     gravity: 0,
   });
@@ -62,152 +71,136 @@ export default function ParticleCanvas() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const colors = COLOR_PRESETS[colorPreset as keyof typeof COLOR_PRESETS]?.colors || COLOR_PRESETS.cosmic.colors;
-  const bgColor = COLOR_PRESETS[colorPreset as keyof typeof COLOR_PRESETS]?.bg || COLOR_PRESETS.cosmic.bg;
 
   const createParticle = useCallback((width: number, height: number): Particle => ({
     x: Math.random() * width,
     y: Math.random() * height,
-    vx: (Math.random() - 0.5) * 2,
-    vy: (Math.random() - 0.5) * 2,
-    size: Math.random() * 3 + 1,
+    vx: (Math.random() - 0.5) * 1.5,
+    vy: (Math.random() - 0.5) * 1.5,
+    size: Math.random() * 4 + 2,
     color: colors[Math.floor(Math.random() * colors.length)],
-    alpha: Math.random() * 0.5 + 0.5,
+    alpha: Math.random() * 0.6 + 0.4,
   }), [colors]);
 
   const createStar = useCallback((width: number, height: number): Star => ({
     x: Math.random() * width,
     y: Math.random() * height,
-    size: Math.random() * 2 + 0.5,
-    alpha: Math.random() * 0.5 + 0.3,
-    twinkleSpeed: Math.random() * 0.02 + 0.01,
+    baseX: 0,
+    baseY: 0,
+    size: Math.random() * 2 + 1,
+    alpha: Math.random() * 0.6 + 0.4,
+    twinkleSpeed: Math.random() * 0.03 + 0.01,
     twinklePhase: Math.random() * Math.PI * 2,
   }), []);
 
-  const createSmokeParticle = useCallback((width: number, height: number): Particle => {
-    const side = Math.floor(Math.random() * 4);
-    let x, y;
-    if (side === 0) { x = Math.random() * width; y = height + 50; }
-    else if (side === 1) { x = Math.random() * width; y = -50; }
-    else if (side === 2) { x = -50; y = Math.random() * height; }
-    else { x = width + 50; y = Math.random() * height; }
-    
+  const createSmoke = useCallback((width: number, height: number): SmokeParticle => {
+    const side = Math.random();
+    let x: number, y: number;
+    if (side < 0.5) {
+      x = Math.random() * width;
+      y = height + 50;
+    } else {
+      x = Math.random() < 0.5 ? -50 : width + 50;
+      y = Math.random() * height;
+    }
     return {
       x,
       y,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: -Math.random() * 0.5 - 0.2,
-      size: Math.random() * 80 + 40,
-      color: '#ffffff',
-      alpha: Math.random() * 0.03 + 0.01,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -Math.random() * 0.4 - 0.1,
+      size: Math.random() * 100 + 50,
+      alpha: 0,
     };
   }, []);
 
-  const initParticles = useCallback((width: number, height: number) => {
-    particlesRef.current = Array.from({ length: settings.particleCount }, () => 
-      createParticle(width, height)
-    );
-    starsRef.current = Array.from({ length: 150 }, () => createStar(width, height));
-    smokeParticlesRef.current = Array.from({ length: 30 }, () => createSmokeParticle(width, height));
-  }, [settings.particleCount, createParticle, createStar, createSmokeParticle]);
+  const initAll = useCallback((width: number, height: number) => {
+    particlesRef.current = Array.from({ length: settings.particleCount }, () => createParticle(width, height));
+    starsRef.current = Array.from({ length: 200 }, () => {
+      const star = createStar(width, height);
+      star.baseX = star.x;
+      star.baseY = star.y;
+      return star;
+    });
+    smokeRef.current = Array.from({ length: 25 }, () => createSmoke(width, height));
+  }, [settings.particleCount, createParticle, createStar, createSmoke]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const bgCanvas = bgCanvasRef.current;
-    const smokeCanvas = smokeCanvasRef.current;
-    if (!canvas || !bgCanvas || !smokeCanvas) return;
+    if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    const bgCtx = bgCanvas.getContext('2d');
-    const smokeCtx = smokeCanvas.getContext('2d');
-    if (!ctx || !bgCtx || !smokeCtx) return;
+    if (!ctx) return;
 
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      bgCanvas.width = window.innerWidth;
-      bgCanvas.height = window.innerHeight;
-      smokeCanvas.width = window.innerWidth;
-      smokeCanvas.height = window.innerHeight;
-      initParticles(canvas.width, canvas.height);
+      initAll(canvas.width, canvas.height);
     };
 
     resize();
     window.addEventListener('resize', resize);
 
-    let time = 0;
-
     const animate = () => {
-      time++;
+      frameRef.current++;
+      const width = canvas.width;
+      const height = canvas.height;
       
-      // Clear with fade for trails
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Clear with dark background
+      ctx.fillStyle = '#050510';
+      ctx.fillRect(0, 0, width, height);
 
-      // Draw stars (background)
-      bgCtx.fillStyle = '#000';
-      bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-      
-      const mouseSpeed = Math.sqrt(
-        Math.pow(mouseRef.current.x - mouseRef.current.prevX, 2) +
-        Math.pow(mouseRef.current.y - mouseRef.current.prevY, 2)
-      );
-      const mouseInfluence = Math.min(mouseSpeed * 2, 50);
-
+      // Draw stars
       starsRef.current.forEach((star) => {
-        star.twinklePhase += star.twinkleSpeed;
-        const twinkle = Math.sin(star.twinklePhase) * 0.3 + 0.7;
-        const distToMouse = Math.sqrt(
-          Math.pow(star.x - mouseRef.current.x, 2) +
-          Math.pow(star.y - mouseRef.current.y, 2)
-        );
+        // Mouse repulsion
+        const dx = star.x - mouseRef.current.x;
+        const dy = star.y - mouseRef.current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const mouseDist = 150;
         
-        // Stars move slightly away from mouse
-        if (distToMouse < 200) {
-          const force = (200 - distToMouse) / 200;
-          const angle = Math.atan2(star.y - mouseRef.current.y, star.x - mouseRef.current.x);
-          star.x += Math.cos(angle) * force * mouseInfluence * 0.1;
-          star.y += Math.sin(angle) * force * mouseInfluence * 0.1;
-          
-          // Wrap around screen
-          if (star.x < 0) star.x = bgCanvas.width;
-          if (star.x > bgCanvas.width) star.x = 0;
-          if (star.y < 0) star.y = bgCanvas.height;
-          if (star.y > bgCanvas.height) star.y = 0;
+        if (dist < mouseDist) {
+          const force = (mouseDist - dist) / mouseDist;
+          const angle = Math.atan2(dy, dx);
+          const moveX = Math.cos(angle) * force * 30;
+          const moveY = Math.sin(angle) * force * 30;
+          star.x = star.baseX + moveX;
+          star.y = star.baseY + moveY;
+        } else {
+          // Slowly return to base position
+          star.x += (star.baseX - star.x) * 0.02;
+          star.y += (star.baseY - star.y) * 0.02;
         }
         
-        bgCtx.beginPath();
-        bgCtx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        bgCtx.fillStyle = `rgba(255, 255, 255, ${star.alpha * twinkle})`;
-        bgCtx.fill();
+        // Twinkle
+        star.twinklePhase += star.twinkleSpeed;
+        const twinkle = Math.sin(star.twinklePhase) * 0.4 + 0.6;
+        
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha * twinkle})`;
+        ctx.fill();
       });
 
       // Draw smoke
-      smokeCtx.fillStyle = 'rgba(0, 0, 0, 0.02)';
-      smokeCtx.fillRect(0, 0, smokeCanvas.width, smokeCanvas.height);
-      
-      smokeParticlesRef.current.forEach((particle) => {
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-        particle.alpha *= 0.998;
+      smokeRef.current.forEach((smoke) => {
+        smoke.x += smoke.vx;
+        smoke.y += smoke.vy;
+        smoke.alpha += 0.002;
         
-        if (particle.alpha < 0.001 || 
-            particle.y < -100 || particle.y > smokeCanvas.height + 100 ||
-            particle.x < -100 || particle.x > smokeCanvas.width + 100) {
-          const newParticle = createSmokeParticle(smokeCanvas.width, smokeCanvas.height);
-          Object.assign(particle, newParticle);
+        if (smoke.alpha > 0.08 || smoke.y < -100) {
+          Object.assign(smoke, createSmoke(width, height));
         }
         
-        const gradient = smokeCtx.createRadialGradient(
-          particle.x, particle.y, 0,
-          particle.x, particle.y, particle.size
+        const gradient = ctx.createRadialGradient(
+          smoke.x, smoke.y, 0,
+          smoke.x, smoke.y, smoke.size
         );
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${particle.alpha})`);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${smoke.alpha})`);
         gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
         
-        smokeCtx.beginPath();
-        smokeCtx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        smokeCtx.fillStyle = gradient;
-        smokeCtx.fill();
+        ctx.beginPath();
+        ctx.arc(smoke.x, smoke.y, smoke.size, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
       });
 
       // Draw particles
@@ -222,11 +215,11 @@ export default function ParticleCanvas() {
           const angle = Math.atan2(dy, dx);
           
           if (mouseRef.current.pressed) {
-            particle.vx += Math.cos(angle) * force * settings.mouseForce * 2;
-            particle.vy += Math.sin(angle) * force * settings.mouseForce * 2;
+            particle.vx += Math.cos(angle) * force * settings.mouseForce * 3;
+            particle.vy += Math.sin(angle) * force * settings.mouseForce * 3;
           } else {
-            particle.vx -= Math.cos(angle) * force * settings.mouseForce * 0.5;
-            particle.vy -= Math.sin(angle) * force * settings.mouseForce * 0.5;
+            particle.vx += Math.cos(angle) * force * settings.mouseForce * 0.3;
+            particle.vy += Math.sin(angle) * force * settings.mouseForce * 0.3;
           }
         }
 
@@ -237,31 +230,30 @@ export default function ParticleCanvas() {
         particle.x += particle.vx;
         particle.y += particle.vy;
 
-        if (particle.x < 0 || particle.x > canvas.width) {
+        if (particle.x < 0 || particle.x > width) {
           particle.vx *= -0.8;
-          particle.x = Math.max(0, Math.min(canvas.width, particle.x));
+          particle.x = Math.max(0, Math.min(width, particle.x));
         }
-        if (particle.y < 0 || particle.y > canvas.height) {
+        if (particle.y < 0 || particle.y > height) {
           particle.vy *= -0.8;
-          particle.y = Math.max(0, Math.min(canvas.height, particle.y));
+          particle.y = Math.max(0, Math.min(height, particle.y));
         }
 
-        // Glow effect
+        // Glow
         const glow = ctx.createRadialGradient(
           particle.x, particle.y, 0,
-          particle.x, particle.y, particle.size * 4
+          particle.x, particle.y, particle.size * 3
         );
         glow.addColorStop(0, particle.color);
-        glow.addColorStop(0.3, particle.color);
         glow.addColorStop(1, 'transparent');
         
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size * 4, 0, Math.PI * 2);
+        ctx.arc(particle.x, particle.y, particle.size * 3, 0, Math.PI * 2);
         ctx.fillStyle = glow;
-        ctx.globalAlpha = particle.alpha * 0.4;
+        ctx.globalAlpha = particle.alpha * 0.5;
         ctx.fill();
         
-        // Core particle
+        // Core
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         ctx.fillStyle = particle.color;
@@ -270,8 +262,6 @@ export default function ParticleCanvas() {
       });
 
       ctx.globalAlpha = 1;
-      
-      // Update previous mouse position
       mouseRef.current.prevX = mouseRef.current.x;
       mouseRef.current.prevY = mouseRef.current.y;
       
@@ -284,12 +274,7 @@ export default function ParticleCanvas() {
       window.removeEventListener('resize', resize);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [settings, createSmokeParticle]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas) initParticles(canvas.width, canvas.height);
-  }, [settings.particleCount, initParticles]);
+  }, [settings, createSmoke]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -305,20 +290,8 @@ export default function ParticleCanvas() {
     mouseRef.current.y = e.clientY;
   };
 
-  const handleMouseDown = () => {
-    mouseRef.current.pressed = true;
-  };
-
-  const handleMouseUp = () => {
-    mouseRef.current.pressed = false;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
-      mouseRef.current.x = e.touches[0].clientX;
-      mouseRef.current.y = e.touches[0].clientY;
-    }
-  };
+  const handleMouseDown = () => mouseRef.current.pressed = true;
+  const handleMouseUp = () => mouseRef.current.pressed = false;
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -331,90 +304,62 @@ export default function ParticleCanvas() {
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden" style={{ background: '#000' }}>
-      {/* Layered canvases */}
-      <canvas ref={bgCanvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
-      <canvas ref={smokeCanvasRef} className="absolute inset-0" style={{ zIndex: 1 }} />
+    <div className="fixed inset-0 overflow-hidden" style={{ background: '#050510' }}>
       <canvas
         ref={canvasRef}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onTouchMove={handleTouchMove}
-        onTouchStart={(e) => {
-          if (e.touches.length > 0) {
-            mouseRef.current.x = e.touches[0].clientX;
-            mouseRef.current.y = e.touches[0].clientY;
-            mouseRef.current.pressed = true;
-          }
-        }}
-        onTouchEnd={() => {
-          mouseRef.current.pressed = false;
-        }}
-        className="absolute inset-0 cursor-crosshair"
-        style={{ zIndex: 2 }}
+        className="absolute inset-0"
       />
       
-      {/* Big Title */}
-      <div 
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        style={{ zIndex: 3 }}
-      >
+      {/* Title */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
         <h1 
-          className="text-8xl font-bold tracking-wider"
+          className="text-9xl font-bold tracking-[0.3em]"
           style={{
-            background: 'linear-gradient(135deg, #fff 0%, #a0a0ff 50%, #ff80c0 100%)',
+            background: 'linear-gradient(180deg, #ffffff 0%, #c0c0ff 50%, #8080ff 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            textShadow: '0 0 60px rgba(160, 160, 255, 0.5)',
-            filter: 'drop-shadow(0 0 20px rgba(160, 160, 255, 0.3))',
+            filter: 'drop-shadow(0 0 40px rgba(150, 150, 255, 0.4))',
           }}
         >
           PARTICLE FLOW
         </h1>
       </div>
 
-      {/* Glass Control Panel */}
+      {/* Glass Panel */}
       <div 
-        className="absolute top-6 left-6 z-10 transition-all duration-500"
-        style={{
-          transform: settingsOpen ? 'translateX(0)' : 'translateX(-320px)',
-        }}
+        className="absolute top-6 left-6 z-20 transition-transform duration-300"
+        style={{ transform: settingsOpen ? 'translateX(0)' : 'translateX(-340px)' }}
       >
         <div 
-          className="p-6 rounded-2xl backdrop-blur-xl"
+          className="p-6 rounded-2xl"
           style={{ 
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+            background: 'rgba(20, 20, 40, 0.7)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
           }}
         >
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-semibold text-white">Settings</h2>
-            <button
-              onClick={() => setSettingsOpen(false)}
-              className="text-white/50 hover:text-white transition-colors text-xl leading-none"
-            >
-              ×
-            </button>
+            <button onClick={() => setSettingsOpen(false)} className="text-white/50 hover:text-white text-2xl">×</button>
           </div>
           
           <div className="space-y-4 w-72">
-            {/* Color Presets */}
             <div>
-              <label className="text-xs text-white/60 mb-2 block">Color Theme</label>
+              <label className="text-xs text-white/50 mb-2 block">Theme</label>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(COLOR_PRESETS).map(([key, preset]) => (
                   <button
                     key={key}
                     onClick={() => setColorPreset(key)}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105"
+                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
                     style={{
-                      background: colorPreset === key 
-                        ? `linear-gradient(135deg, ${preset.colors[0]}40, ${preset.colors[preset.colors.length - 1]}40)`
-                        : 'rgba(255, 255, 255, 0.1)',
-                      border: `1px solid ${colorPreset === key ? preset.colors[0] : 'rgba(255, 255, 255, 0.2)'}`,
+                      background: colorPreset === key ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                      border: `1px solid ${colorPreset === key ? '#6366f1' : 'rgba(255, 255, 255, 0.15)'}`,
                       color: '#fff'
                     }}
                   >
@@ -424,41 +369,32 @@ export default function ParticleCanvas() {
               </div>
             </div>
 
-            {/* Particle Count */}
             <div>
-              <label className="text-xs text-white/60 mb-1 block">
-                Particles: {settings.particleCount}
-              </label>
-              <input
-                type="range"
-                min="50"
-                max="500"
-                value={settings.particleCount}
-                onChange={(e) => setSettings({ ...settings, particleCount: Number(e.target.value) })}
-                className="w-full"
-              />
-            </div>
-
-            {/* Mouse Radius */}
-            <div>
-              <label className="text-xs text-white/60 mb-1 block">
-                Mouse Radius: {settings.mouseRadius}
-              </label>
+              <label className="text-xs text-white/50 mb-1 block">Particles: {settings.particleCount}</label>
               <input
                 type="range"
                 min="50"
                 max="400"
-                value={settings.mouseRadius}
-                onChange={(e) => setSettings({ ...settings, mouseRadius: Number(e.target.value) })}
-                className="w-full"
+                value={settings.particleCount}
+                onChange={(e) => setSettings({ ...settings, particleCount: Number(e.target.value) })}
+                className="w-full accent-indigo-500"
               />
             </div>
 
-            {/* Friction */}
             <div>
-              <label className="text-xs text-white/60 mb-1 block">
-                Friction: {settings.friction.toFixed(2)}
-              </label>
+              <label className="text-xs text-white/50 mb-1 block">Mouse Radius: {settings.mouseRadius}</label>
+              <input
+                type="range"
+                min="50"
+                max="300"
+                value={settings.mouseRadius}
+                onChange={(e) => setSettings({ ...settings, mouseRadius: Number(e.target.value) })}
+                className="w-full accent-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-white/50 mb-1 block">Friction: {settings.friction.toFixed(2)}</label>
               <input
                 type="range"
                 min="0.9"
@@ -466,51 +402,44 @@ export default function ParticleCanvas() {
                 step="0.01"
                 value={settings.friction}
                 onChange={(e) => setSettings({ ...settings, friction: Number(e.target.value) })}
-                className="w-full"
+                className="w-full accent-indigo-500"
               />
             </div>
 
-            {/* Gravity */}
             <div>
-              <label className="text-xs text-white/60 mb-1 block">
-                Gravity: {settings.gravity}
-              </label>
+              <label className="text-xs text-white/50 mb-1 block">Gravity: {settings.gravity}</label>
               <input
                 type="range"
-                min="-0.5"
-                max="0.5"
-                step="0.05"
+                min="-0.3"
+                max="0.3"
+                step="0.02"
                 value={settings.gravity}
                 onChange={(e) => setSettings({ ...settings, gravity: Number(e.target.value) })}
-                className="w-full"
+                className="w-full accent-indigo-500"
               />
             </div>
 
-            {/* Fullscreen */}
             <button
               onClick={handleFullscreen}
-              className="w-full py-3 rounded-xl text-sm font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full py-3 rounded-xl text-sm font-medium transition-all"
               style={{
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.6), rgba(168, 85, 247, 0.6))',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 4px 20px rgba(99, 102, 241, 0.3)',
-                color: '#fff'
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)',
               }}
             >
-              {isFullscreen ? 'Exit Fullscreen' : 'Go Fullscreen'}
+              {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Toggle Settings Button */}
+      {/* Toggle Button */}
       <button
         onClick={() => setSettingsOpen(true)}
-        className="absolute top-6 left-6 z-10 p-3 rounded-xl backdrop-blur-xl transition-all hover:scale-110"
+        className="absolute top-6 left-6 z-20 p-3 rounded-xl transition-all hover:scale-110"
         style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+          background: 'rgba(99, 102, 241, 0.3)',
+          border: '1px solid rgba(99, 102, 241, 0.5)',
           opacity: settingsOpen ? 0 : 1,
           pointerEvents: settingsOpen ? 'none' : 'auto',
         }}
@@ -522,8 +451,8 @@ export default function ParticleCanvas() {
       </button>
 
       {/* Instructions */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-white/40 z-10">
-        Move mouse to interact • Click to attract • Scroll to zoom (coming soon)
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-white/30 z-10">
+        Move mouse to interact • Click and hold to attract • Press × to hide settings
       </div>
     </div>
   );
