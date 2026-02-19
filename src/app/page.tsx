@@ -240,29 +240,29 @@ export default function ParticleCanvas() {
 
       // Draw particles
       particlesRef.current.forEach((particle) => {
-        // Text repulsion - only repel from actual letter areas (very localized)
+        // Text collision - letters act as walls, particles cannot pass through
         const textCenterX = width / 2;
         const textCenterY = height * 0.35;
         
-        // More precise text bounds - just a thin band where letters are
-        const letterZoneWidth = width * 0.35;
-        const letterZoneHeight = 60;
+        // Define the text bounding box
+        const textBoxWidth = width * 0.4;
+        const textBoxHeight = 70;
         
-        // Check if particle is in the text zone
-        const inTextZone = Math.abs(particle.x - textCenterX) < letterZoneWidth/2 && 
-                          Math.abs(particle.y - textCenterY) < letterZoneHeight/2;
+        const dxText = particle.x - textCenterX;
+        const dyText = particle.y - textCenterY;
+        
+        // Check if particle is trying to enter the text box
+        const inTextZone = Math.abs(dxText) < textBoxWidth / 2 && Math.abs(dyText) < textBoxHeight / 2;
         
         if (inTextZone) {
-          // Very subtle repulsion - just enough to avoid the actual letters
-          const distFromCenter = Math.sqrt(
-            Math.pow(particle.x - textCenterX, 2) + 
-            Math.pow(particle.y - textCenterY, 2)
-          );
-          const letterRadius = 100;
+          // Strong repulsion - treat letters as solid walls
+          const distFromCenter = Math.sqrt(dxText * dxText + dyText * dyText);
           
-          if (distFromCenter < letterRadius) {
-            const force = Math.pow((letterRadius - distFromCenter) / letterRadius, 2) * 0.3;
-            const angle = Math.atan2(particle.y - textCenterY, particle.x - textCenterX);
+          if (distFromCenter > 5) {
+            const force = 2.5; // Strong force to push back
+            const angle = Math.atan2(dyText, dxText);
+            
+            // Push particle outside the text box
             particle.vx += Math.cos(angle) * force;
             particle.vy += Math.sin(angle) * force;
           }
