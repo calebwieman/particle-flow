@@ -427,22 +427,22 @@ export default function ParticleCanvas() {
         </h1>
       </div>
 
-      {/* Glass Settings Panel */}
-      <div className="absolute top-0 left-0 bottom-0 w-80 z-30 overflow-hidden">
-        <div 
-          className="p-6 rounded-2xl transition-transform duration-300 h-full"
-          style={{ 
-            transform: settingsOpen ? 'translateX(0)' : 'translateX(-100%)',
-            background: 'rgba(15, 15, 35, 0.85)',
-            backdropFilter: 'blur(24px)',
-            borderRight: `1px solid ${currentTheme.accent}40`,
-            boxShadow: `0 8px 40px rgba(0, 0, 0, 0.6), 0 0 30px ${currentTheme.accentLight}, inset 0 1px 0 rgba(255, 255, 255, 0.08)`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold" style={{ color: currentTheme.accent }}>Settings</h2>
-            <button onClick={() => setSettingsOpen(false)} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
-          </div>
+      {/* Glass Settings Panel - only render when open */}
+      {settingsOpen && (
+        <div className="absolute top-0 left-0 bottom-0 w-80 z-30 overflow-hidden">
+          <div 
+            className="p-6 rounded-2xl h-full"
+            style={{ 
+              background: 'rgba(15, 15, 35, 0.85)',
+              backdropFilter: 'blur(24px)',
+              borderRight: `1px solid ${currentTheme.accent}40`,
+              boxShadow: `0 8px 40px rgba(0, 0, 0, 0.6), 0 0 30px ${currentTheme.accentLight}, inset 0 1px 0 rgba(255, 255, 255, 0.08)`,
+            }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold" style={{ color: currentTheme.accent }}>Settings</h2>
+              <button onClick={() => setSettingsOpen(false)} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
+            </div>
           
           <div className="space-y-4 w-64">
             <div>
@@ -531,7 +531,7 @@ export default function ParticleCanvas() {
             </button>
           </div>
         </div>
-      </div>
+        </div>}
 
       {/* Toggle Button - bottom left when panel closed */}
       <button
