@@ -380,10 +380,8 @@ export default function ParticleCanvas() {
         <h1 
           className="text-[90px] font-bold tracking-[0.15em] text-center"
           style={{
-            background: `linear-gradient(180deg, #ffffff 40%, ${currentTheme.accent} 100%)`,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            filter: `drop-shadow(0 0 60px ${currentTheme.accentLight})`,
+            color: '#fff',
+            textShadow: `0 0 40px ${currentTheme.accent}, 0 0 80px ${currentTheme.accentLight}`,
           }}
         >
           PARTICLE<br />FLOW
@@ -391,14 +389,14 @@ export default function ParticleCanvas() {
       </div>
 
       {/* Glass Settings Panel */}
-      <div className="absolute top-1/2 left-6 -translate-y-1/2 z-30">
+      <div className="absolute top-0 left-0 bottom-0 w-80 z-30 overflow-hidden">
         <div 
-          className="p-6 rounded-2xl transition-transform duration-300"
+          className="p-6 rounded-2xl transition-transform duration-300 h-full"
           style={{ 
-            transform: settingsOpen ? 'translateX(0)' : 'translateX(-320px)',
+            transform: settingsOpen ? 'translateX(0)' : 'translateX(-100%)',
             background: 'rgba(15, 15, 35, 0.85)',
             backdropFilter: 'blur(24px)',
-            border: `1px solid ${currentTheme.accent}40`,
+            borderRight: `1px solid ${currentTheme.accent}40`,
             boxShadow: `0 8px 40px rgba(0, 0, 0, 0.6), 0 0 30px ${currentTheme.accentLight}, inset 0 1px 0 rgba(255, 255, 255, 0.08)`,
           }}
         >
