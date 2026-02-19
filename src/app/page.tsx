@@ -236,22 +236,32 @@ export default function ParticleCanvas() {
 
       // Draw particles
       particlesRef.current.forEach((particle) => {
-        // Text repulsion - repel from center text area
+        // Text repulsion - only repel from actual letter areas (very localized)
         const textCenterX = width / 2;
-        const textCenterY = height * 0.35; // where the text is
-        const textWidth = width * 0.5;
-        const textHeight = 120;
+        const textCenterY = height * 0.35;
         
-        const dxText = particle.x - textCenterX;
-        const dyText = particle.y - textCenterY;
-        const distText = Math.sqrt(dxText * dxText + dyText * dyText);
-        const textRadius = Math.max(textWidth, textHeight) / 1.8;
+        // More precise text bounds - just a thin band where letters are
+        const letterZoneWidth = width * 0.35;
+        const letterZoneHeight = 60;
         
-        if (distText < textRadius) {
-          const force = Math.pow((textRadius - distText) / textRadius, 1.5);
-          const angleText = Math.atan2(dyText, dxText);
-          particle.vx += Math.cos(angleText) * force * 0.8;
-          particle.vy += Math.sin(angleText) * force * 0.8;
+        // Check if particle is in the text zone
+        const inTextZone = Math.abs(particle.x - textCenterX) < letterZoneWidth/2 && 
+                          Math.abs(particle.y - textCenterY) < letterZoneHeight/2;
+        
+        if (inTextZone) {
+          // Very subtle repulsion - just enough to avoid the actual letters
+          const distFromCenter = Math.sqrt(
+            Math.pow(particle.x - textCenterX, 2) + 
+            Math.pow(particle.y - textCenterY, 2)
+          );
+          const letterRadius = 100;
+          
+          if (distFromCenter < letterRadius) {
+            const force = Math.pow((letterRadius - distFromCenter) / letterRadius, 2) * 0.3;
+            const angle = Math.atan2(particle.y - textCenterY, particle.x - textCenterX);
+            particle.vx += Math.cos(angle) * force;
+            particle.vy += Math.sin(angle) * force;
+          }
         }
         
         // Mouse influence
