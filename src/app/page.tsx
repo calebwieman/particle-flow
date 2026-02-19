@@ -116,14 +116,14 @@ export default function ParticleCanvas() {
   }), []);
 
   const createSmoke = useCallback((width: number, height: number): SmokeCloud => ({
-    x: Math.random() * width,
+    x: width + 200, // Start from right side
     y: Math.random() * height,
-    vx: (Math.random() - 0.5) * 0.2,
-    vy: -Math.random() * 0.15 - 0.05,
-    size: Math.random() * 200 + 100,
+    vx: -Math.random() * 0.8 - 0.3, // Move left toward center
+    vy: (Math.random() - 0.5) * 0.15, // Slight vertical drift
+    size: Math.random() * 180 + 80,
     alpha: 0,
     rotation: Math.random() * Math.PI * 2,
-    rotationSpeed: (Math.random() - 0.5) * 0.002,
+    rotationSpeed: (Math.random() - 0.5) * 0.003,
   }), []);
 
   const initAll = useCallback((width: number, height: number) => {
@@ -170,9 +170,24 @@ export default function ParticleCanvas() {
         // Fade in then fade out
         if (smoke.alpha < 0.06) smoke.alpha += 0.0008;
         
-        // Reset when off screen
-        if (smoke.y < -smoke.size || smoke.x < -smoke.size || smoke.x > width + smoke.size) {
+        // Reset when off screen (left side)
+        if (smoke.x < -smoke.size * 2 || smoke.y < -smoke.size || smoke.y > height + smoke.size) {
           Object.assign(smoke, createSmoke(width, height));
+        }
+        
+        // Mouse interaction with smoke - push away from cursor
+        const smokeDx = smoke.x - mouseRef.current.x;
+        const smokeDy = smoke.y - mouseRef.current.y;
+        const smokeDist = Math.sqrt(smokeDx * smokeDx + smokeDy * smokeDy);
+        const smokeMouseRadius = 150;
+        
+        if (smokeDist < smokeMouseRadius) {
+          const smokeForce = (smokeMouseRadius - smokeDist) / smokeMouseRadius;
+          const smokeAngle = Math.atan2(smokeDy, smokeDx);
+          smoke.x += Math.cos(smokeAngle) * smokeForce * 2;
+          smoke.y += Math.sin(smokeAngle) * smokeForce * 2;
+          smoke.vx += Math.cos(smokeAngle) * smokeForce * 0.02;
+          smoke.vy += Math.sin(smokeAngle) * smokeForce * 0.02;
         }
         
         // Draw smoke cloud
