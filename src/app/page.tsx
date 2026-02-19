@@ -47,7 +47,7 @@ const THEMES = {
   cosmic: { 
     name: 'Cosmic', 
     particles: ['#ffffff', '#e8e8ff', '#d0d0ff', '#c8c8ff', '#ffffff'],
-    smoke: ['rgba(255,255,255,', 'rgba(200,200,255,'],
+    smoke: ['rgba(255,255,255,', 'rgba(220,220,240,', 'rgba(200,200,220,'],
   },
   ocean: { 
     name: 'Ocean', 
@@ -116,14 +116,14 @@ export default function ParticleCanvas() {
   }), []);
 
   const createSmoke = useCallback((width: number, height: number): SmokeCloud => ({
-    x: width + 200, // Start from right side
+    x: -200, // Start from LEFT side
     y: Math.random() * height,
-    vx: -Math.random() * 0.8 - 0.3, // Move left toward center
-    vy: (Math.random() - 0.5) * 0.15, // Slight vertical drift
-    size: Math.random() * 180 + 80,
+    vx: Math.random() * 0.8 + 0.4, // Move RIGHT toward center
+    vy: (Math.random() - 0.5) * 0.2,
+    size: Math.random() * 220 + 100, // Larger clouds
     alpha: 0,
     rotation: Math.random() * Math.PI * 2,
-    rotationSpeed: (Math.random() - 0.5) * 0.003,
+    rotationSpeed: (Math.random() - 0.5) * 0.002,
   }), []);
 
   const initAll = useCallback((width: number, height: number) => {
@@ -134,7 +134,7 @@ export default function ParticleCanvas() {
       star.baseY = star.y;
       return star;
     });
-    smokeRef.current = Array.from({ length: 15 }, () => createSmoke(width, height));
+    smokeRef.current = Array.from({ length: 20 }, () => createSmoke(width, height));
   }, [settings.particleCount, createParticle, createStar, createSmoke]);
 
   useEffect(() => {
@@ -167,11 +167,11 @@ export default function ParticleCanvas() {
         smoke.y += smoke.vy;
         smoke.rotation += smoke.rotationSpeed;
         
-        // Fade in then fade out
-        if (smoke.alpha < 0.06) smoke.alpha += 0.0008;
+        // Fade in then fade out - more visible
+        if (smoke.alpha < 0.08) smoke.alpha += 0.001;
         
-        // Reset when off screen (left side)
-        if (smoke.x < -smoke.size * 2 || smoke.y < -smoke.size || smoke.y > height + smoke.size) {
+        // Reset when off screen (right side)
+        if (smoke.x > width + smoke.size * 2 || smoke.y < -smoke.size || smoke.y > height + smoke.size) {
           Object.assign(smoke, createSmoke(width, height));
         }
         
@@ -190,21 +190,25 @@ export default function ParticleCanvas() {
           smoke.vy += Math.sin(smokeAngle) * smokeForce * 0.02;
         }
         
-        // Draw smoke cloud
+        // Draw smoke cloud - ethereal wispy look
         ctx.save();
         ctx.translate(smoke.x, smoke.y);
         ctx.rotate(smoke.rotation);
         
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, smoke.size);
-        const smokeColor = currentTheme.smoke[Math.floor(Math.random() * currentTheme.smoke.length)];
-        gradient.addColorStop(0, `${smokeColor}${smoke.alpha})`);
-        gradient.addColorStop(0.4, `${smokeColor}${smoke.alpha * 0.5})`);
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-        
-        ctx.beginPath();
-        ctx.arc(0, 0, smoke.size, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
+        // Multiple layered gradients for wispy effect
+        for (let i = 0; i < 3; i++) {
+          const layerSize = smoke.size * (1 - i * 0.25);
+          const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, layerSize);
+          const smokeColor = currentTheme.smoke[i % currentTheme.smoke.length];
+          gradient.addColorStop(0, `${smokeColor}${smoke.alpha * (1 - i * 0.3)})`);
+          gradient.addColorStop(0.5, `${smokeColor}${smoke.alpha * 0.3 * (1 - i * 0.3)})`);
+          gradient.addColorStop(1, 'rgba(0,0,0,0)');
+          
+          ctx.beginPath();
+          ctx.arc(i * 20 - 30, i * 10 - 15, layerSize, 0, Math.PI * 2);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+        }
         ctx.restore();
       });
 
