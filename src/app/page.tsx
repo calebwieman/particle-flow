@@ -22,6 +22,8 @@ interface Star {
   alpha: number;
   twinkleSpeed: number;
   twinklePhase: number;
+  trail?: { x: number; y: number; alpha: number }[];
+  trailTimer?: number;
 }
 
 interface SmokeCloud {
@@ -222,8 +224,41 @@ export default function ParticleCanvas() {
         ctx.restore();
       });
 
-      // Draw stars (white/pure)
+      // Draw stars with occasional trails/shooting stars
       starsRef.current.forEach((star) => {
+        // Random trail spawning
+        if (!star.trail && Math.random() < 0.002) {
+          star.trail = [];
+          star.trailTimer = 30;
+        }
+        
+        // Update trail
+        if (star.trail && star.trailTimer) {
+          star.trailTimer--;
+          if (star.trailTimer <= 0) {
+            star.trail = undefined;
+            star.trailTimer = undefined;
+          } else {
+            star.trail.push({ x: star.x, y: star.y, alpha: 1 });
+            if (star.trail.length > 15) star.trail.shift();
+          }
+        }
+        
+        // Draw trail
+        if (star.trail) {
+          star.trail.forEach((point, i) => {
+            const trailAlpha = (i / star.trail!.length) * 0.8;
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, star.size * 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${trailAlpha})`;
+            ctx.fill();
+          });
+        }
+        
+        // Random wandering movement
+        const wander = Math.sin(Date.now() * 0.001 + star.baseX) * 0.3;
+        
+        // Mouse interaction
         const dx = star.x - mouseRef.current.x;
         const dy = star.y - mouseRef.current.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -250,6 +285,10 @@ export default function ParticleCanvas() {
 
       // Draw particles
       particlesRef.current.forEach((particle) => {
+        // Random wandering movement - gives natural organic feel
+        particle.vx += (Math.random() - 0.5) * 0.15;
+        particle.vy += (Math.random() - 0.5) * 0.15;
+        
         // Text collision - letters act as walls, particles cannot pass through
         const textCenterX = width / 2;
         const textCenterY = height * 0.35;
