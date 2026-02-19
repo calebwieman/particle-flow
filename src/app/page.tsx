@@ -221,6 +221,25 @@ export default function ParticleCanvas() {
 
       // Draw particles
       particlesRef.current.forEach((particle) => {
+        // Text repulsion - repel from center text area
+        const textCenterX = width / 2;
+        const textCenterY = height * 0.35; // where the text is
+        const textWidth = width * 0.5;
+        const textHeight = 120;
+        
+        const dxText = particle.x - textCenterX;
+        const dyText = particle.y - textCenterY;
+        const distText = Math.sqrt(dxText * dxText + dyText * dyText);
+        const textRadius = Math.max(textWidth, textHeight) / 1.8;
+        
+        if (distText < textRadius) {
+          const force = Math.pow((textRadius - distText) / textRadius, 1.5);
+          const angleText = Math.atan2(dyText, dxText);
+          particle.vx += Math.cos(angleText) * force * 0.8;
+          particle.vy += Math.sin(angleText) * force * 0.8;
+        }
+        
+        // Mouse influence
         const dx = mouseRef.current.x - particle.x;
         const dy = mouseRef.current.y - particle.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -317,16 +336,15 @@ export default function ParticleCanvas() {
         className="absolute inset-0"
       />
       
-      {/* Title */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+      {/* Title - smaller and shifted up */}
+      <div className="absolute inset-0 flex items-start justify-center pointer-events-none z-10" style={{ paddingTop: '8vh' }}>
         <h1 
-          className="text-[120px] font-bold tracking-[0.2em] text-center"
+          className="text-[90px] font-bold tracking-[0.15em] text-center"
           style={{
             background: 'linear-gradient(180deg, #ffffff 40%, #b0b0ff 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             filter: 'drop-shadow(0 0 60px rgba(150, 150, 255, 0.5))',
-            textShadow: '0 0 80px rgba(180, 180, 255, 0.3)',
           }}
         >
           PARTICLE<br />FLOW
