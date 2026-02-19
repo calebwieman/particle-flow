@@ -531,7 +531,7 @@ export default function ParticleCanvas() {
             </button>
           </div>
         </div>
-        </div>}
+      </div>}
 
       {/* Toggle Button - bottom left when panel closed */}
       <button
