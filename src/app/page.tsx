@@ -91,7 +91,7 @@ export default function ParticleCanvas() {
   const mouseRef = useRef({ x: -1000, y: -1000, pressed: false, prevX: 0, prevY: 0 });
   const animationRef = useRef<number>();
   
-  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>({
     particleCount: 120,
     mouseRadius: 150,
@@ -132,7 +132,7 @@ export default function ParticleCanvas() {
     y: Math.random() * height * 0.6 + height * 0.2, // Focus toward middle vertically
     vx: -Math.random() * 1.2 - 0.6, // Faster movement toward center
     vy: (Math.random() - 0.5) * 0.3,
-    size: Math.random() * 300 + 150, // Much larger clouds
+    size: Math.random() * 250 + 120, // Large but not too big
     alpha: 0,
     rotation: Math.random() * Math.PI * 2,
     rotationSpeed: (Math.random() - 0.5) * 0.004,
@@ -146,7 +146,7 @@ export default function ParticleCanvas() {
       star.baseY = star.y;
       return star;
     });
-    smokeRef.current = Array.from({ length: 25 }, () => createSmoke(width, height));
+    smokeRef.current = Array.from({ length: 12 }, () => createSmoke(width, height));
   }, [settings.particleCount, createParticle, createStar, createSmoke]);
 
   useEffect(() => {
@@ -179,8 +179,8 @@ export default function ParticleCanvas() {
         smoke.y += smoke.vy;
         smoke.rotation += smoke.rotationSpeed;
         
-        // Fade in then fade out - much more visible
-        if (smoke.alpha < 0.18) smoke.alpha += 0.002;
+        // Fade in then fade out - more transparent
+        if (smoke.alpha < 0.08) smoke.alpha += 0.002;
         
         // Slow down as it gets closer to center
         if (smoke.x < width * 0.7 && smoke.vx > -0.3) {
