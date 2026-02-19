@@ -48,26 +48,36 @@ const THEMES = {
     name: 'Cosmic', 
     particles: ['#ffffff', '#e8e8ff', '#d0d0ff', '#c8c8ff', '#ffffff'],
     smoke: ['rgba(255,255,255,', 'rgba(220,220,240,', 'rgba(200,200,220,'],
+    accent: '#a0a0ff',
+    accentLight: 'rgba(160,160,255,0.5)',
   },
   ocean: { 
     name: 'Ocean', 
     particles: ['#00d9ff', '#00ffcc', '#66ffff', '#00b3cc'],
     smoke: ['rgba(0,217,255,', 'rgba(0,255,204,'],
+    accent: '#00d9ff',
+    accentLight: 'rgba(0,217,255,0.5)',
   },
   sunset: { 
     name: 'Sunset', 
     particles: ['#ff6b35', '#f7c59f', '#efa00b', '#d62246'],
     smoke: ['rgba(255,107,53,', 'rgba(247,197,159,'],
+    accent: '#ff6b35',
+    accentLight: 'rgba(255,107,53,0.5)',
   },
   neon: { 
     name: 'Neon', 
     particles: ['#ff00ff', '#00ffff', '#ffff00', '#ff0080'],
     smoke: ['rgba(255,0,255,', 'rgba(0,255,255,'],
+    accent: '#ff00ff',
+    accentLight: 'rgba(255,0,255,0.5)',
   },
   fire: { 
     name: 'Fire', 
     particles: ['#ff4500', '#ff8c00', '#ffd700', '#ff6347'],
     smoke: ['rgba(255,69,0,', 'rgba(255,140,0,'],
+    accent: '#ff4500',
+    accentLight: 'rgba(255,69,0,0.5)',
   },
 };
 
@@ -370,10 +380,10 @@ export default function ParticleCanvas() {
         <h1 
           className="text-[90px] font-bold tracking-[0.15em] text-center"
           style={{
-            background: 'linear-gradient(180deg, #ffffff 40%, #b0b0ff 100%)',
+            background: `linear-gradient(180deg, #ffffff 40%, ${currentTheme.accent} 100%)`,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            filter: 'drop-shadow(0 0 60px rgba(150, 150, 255, 0.5))',
+            filter: `drop-shadow(0 0 60px ${currentTheme.accentLight})`,
           }}
         >
           PARTICLE<br />FLOW
@@ -388,12 +398,12 @@ export default function ParticleCanvas() {
             transform: settingsOpen ? 'translateX(0)' : 'translateX(-320px)',
             background: 'rgba(15, 15, 35, 0.85)',
             backdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            boxShadow: '0 8px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+            border: `1px solid ${currentTheme.accent}40`,
+            boxShadow: `0 8px 40px rgba(0, 0, 0, 0.6), 0 0 30px ${currentTheme.accentLight}, inset 0 1px 0 rgba(255, 255, 255, 0.08)`,
           }}
         >
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold text-white">Settings</h2>
+            <h2 className="text-lg font-semibold" style={{ color: currentTheme.accent }}>Settings</h2>
             <button onClick={() => setSettingsOpen(false)} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
           </div>
           
@@ -407,8 +417,8 @@ export default function ParticleCanvas() {
                     onClick={() => setTheme(key)}
                     className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
                     style={{
-                      background: theme === key ? 'rgba(99, 102, 241, 0.5)' : 'rgba(255, 255, 255, 0.08)',
-                      border: `1px solid ${theme === key ? '#6366f1' : 'rgba(255, 255, 255, 0.1)'}`,
+                      background: theme === key ? t.accentLight : 'rgba(255, 255, 255, 0.08)',
+                      border: `1px solid ${theme === key ? t.accent : 'rgba(255, 255, 255, 0.1)'}`,
                       color: '#fff'
                     }}
                   >
@@ -426,7 +436,8 @@ export default function ParticleCanvas() {
                 max="300"
                 value={settings.particleCount}
                 onChange={(e) => setSettings({ ...settings, particleCount: Number(e.target.value) })}
-                className="w-full accent-indigo-500"
+                className="w-full"
+                style={{ accentColor: currentTheme.accent }}
               />
             </div>
 
@@ -438,7 +449,8 @@ export default function ParticleCanvas() {
                 max="300"
                 value={settings.mouseRadius}
                 onChange={(e) => setSettings({ ...settings, mouseRadius: Number(e.target.value) })}
-                className="w-full accent-indigo-500"
+                className="w-full"
+                style={{ accentColor: currentTheme.accent }}
               />
             </div>
 
@@ -451,7 +463,8 @@ export default function ParticleCanvas() {
                 step="0.01"
                 value={settings.friction}
                 onChange={(e) => setSettings({ ...settings, friction: Number(e.target.value) })}
-                className="w-full accent-indigo-500"
+                className="w-full"
+                style={{ accentColor: currentTheme.accent }}
               />
             </div>
 
@@ -464,7 +477,8 @@ export default function ParticleCanvas() {
                 step="0.02"
                 value={settings.gravity}
                 onChange={(e) => setSettings({ ...settings, gravity: Number(e.target.value) })}
-                className="w-full accent-indigo-500"
+                className="w-full"
+                style={{ accentColor: currentTheme.accent }}
               />
             </div>
 
@@ -472,8 +486,8 @@ export default function ParticleCanvas() {
               onClick={handleFullscreen}
               className="w-full py-3 rounded-xl text-sm font-medium transition-all"
               style={{
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                boxShadow: '0 4px 20px rgba(99, 102, 241, 0.4)',
+                background: `linear-gradient(135deg, ${currentTheme.accent}, ${currentTheme.accent}dd)`,
+                boxShadow: `0 4px 20px ${currentTheme.accentLight}`,
               }}
             >
               {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
@@ -482,14 +496,14 @@ export default function ParticleCanvas() {
         </div>
       </div>
 
-      {/* Toggle Button */}
+      {/* Toggle Button - bottom left when panel closed */}
       <button
         onClick={() => setSettingsOpen(true)}
-        className="absolute top-1/2 left-6 -translate-y-1/2 z-30 p-3 rounded-xl transition-all hover:scale-110"
+        className="absolute bottom-6 left-6 z-30 p-3 rounded-xl transition-all hover:scale-110"
         style={{
-          background: 'rgba(99, 102, 241, 0.4)',
-          border: '1px solid rgba(99, 102, 241, 0.6)',
-          boxShadow: '0 4px 20px rgba(99, 102, 241, 0.3)',
+          background: `${currentTheme.accent}40`,
+          border: `1px solid ${currentTheme.accent}`,
+          boxShadow: `0 4px 20px ${currentTheme.accentLight}`,
           opacity: settingsOpen ? 0 : 1,
           pointerEvents: settingsOpen ? 'none' : 'auto',
         }}
